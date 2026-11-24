@@ -13,7 +13,9 @@ local Config = Shared:WaitForChild("Config")
 local Weapons = require(Config:WaitForChild("Weapons"))
 local Combat = require(Config:WaitForChild("Combat"))
 local DamageRules = require(Shared:WaitForChild("DamageRules"))
+local Signals = require(script.Parent:WaitForChild("Modules"):WaitForChild("Signals"))
 
+local MatchState = ReplicatedStorage:WaitForChild("MatchState")
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local FireShot = Remotes:WaitForChild("FireShot") :: RemoteEvent
 local Reload = Remotes:WaitForChild("Reload") :: RemoteEvent
@@ -100,17 +102,6 @@ local function dropSpawnProtection(character: Model)
 	end
 end
 
-local function bumpStat(player: Player?, statName: string)
-	if not player then
-		return
-	end
-	local leaderstats = player:FindFirstChild("leaderstats")
-	local stat = leaderstats and leaderstats:FindFirstChild(statName)
-	if stat and stat:IsA("IntValue") then
-		stat.Value += 1
-	end
-end
-
 -- How far the claimed hit point may be from the part's position on the server.
 -- What the shooter saw is slightly in the past, so moving targets get more slack.
 local function hitTolerance(shooter: Player, targetCharacter: Model, hitPart: BasePart): number
@@ -142,8 +133,11 @@ end
 
 -- `special` = headshot for the sniper, backstab for the knife.
 local function applyDamage(attacker: Player, targetHumanoid: Humanoid, damage: number, weaponName: string, special: boolean)
+	if MatchState:GetAttribute("Phase") == "Results" then
+		return -- round is over, no damage on the results screen
+	end
 	local targetCharacter = targetHumanoid.Parent
-	if not targetCharacter or targetCharacter:FindFirstChildOfClass("ForceField") then
+	if not targetCharacter or not targetCharacter:IsA("Model") or targetCharacter:FindFirstChildOfClass("ForceField") then
 		return -- spawn protected
 	end
 	if targetHumanoid.Health <= 0 then
@@ -156,11 +150,18 @@ local function applyDamage(attacker: Player, targetHumanoid: Humanoid, damage: n
 
 	if killed then
 		local victim = Players:GetPlayerFromCharacter(targetCharacter)
-		bumpStat(attacker, "Kills")
-		bumpStat(victim, "Deaths")
 		local victimName = if victim then victim.DisplayName else targetCharacter.Name
-		KillFeed:FireAllClients(attacker.DisplayName, victimName, weaponName, special)
-		-- TODO(M3): award Taps + XP through PlayerData here.
+		-- attacker + position let clients play the attacker's equipped kill effect.
+		KillFeed:FireAllClients(
+			attacker.DisplayName,
+			victimName,
+			weaponName,
+			special,
+			attacker,
+			targetCharacter:GetPivot().Position
+		)
+		-- Scoring (MatchServer), rewards (Progression), challenges all listen to this.
+		Signals.Kill:Fire(attacker, victim, weaponName, special)
 	end
 end
 

@@ -7,6 +7,9 @@
       "Shared": {
         "$path": "src/shared"
       },
+      "MatchState": {
+        "$className": "Configuration"
+      },
       "Remotes": {
         "$className": "Folder",
         "FireShot": { "$className": "RemoteEvent" },
@@ -14,7 +17,12 @@
         "KnifeSwing": { "$className": "RemoteEvent" },
         "HitConfirm": { "$className": "RemoteEvent" },
         "KillFeed": { "$className": "RemoteEvent" },
-        "ShotFired": { "$className": "UnreliableRemoteEvent" }
+        "ShotFired": { "$className": "UnreliableRemoteEvent" },
+        "MapVote": { "$className": "RemoteEvent" },
+        "MatchResults": { "$className": "RemoteEvent" },
+        "ProfileSync": { "$className": "RemoteEvent" },
+        "Notify": { "$className": "RemoteEvent" },
+        "PlayerAction": { "$className": "RemoteFunction" }
       }
     },
 
