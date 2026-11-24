@@ -24,6 +24,7 @@ local Combat = require(Config:WaitForChild("Combat"))
 local DamageRules = require(Shared:WaitForChild("DamageRules"))
 local Hud = require(script.Parent:WaitForChild("Hud"))
 local Effects = require(script.Parent:WaitForChild("Effects"))
+local MenuState = require(script.Parent:WaitForChild("MenuState"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local FireShot = Remotes:WaitForChild("FireShot") :: RemoteEvent
@@ -62,6 +63,11 @@ local scopeProgress = 0 -- 0 = hip, 1 = fully scoped
 
 local function holding(toolName: string): boolean
 	return equipped ~= nil and equipped.Name == toolName
+end
+
+-- Weapon out: hide the cursor (we draw a crosshair). Menu open: always show it.
+local function refreshMouseIcon()
+	UserInputService.MouseIconEnabled = equipped == nil or MenuState.anyOpen()
 end
 
 local function isAlive(): boolean
@@ -170,7 +176,7 @@ local function reload()
 end
 
 local function fireSniper()
-	if not isAlive() then
+	if not isAlive() or MenuState.anyOpen() then
 		return
 	end
 	local now = os.clock()
@@ -215,7 +221,7 @@ end
 --------------------------------------------------------------------------------
 
 local function swingKnife()
-	if not isAlive() then
+	if not isAlive() or MenuState.anyOpen() then
 		return
 	end
 	local now = os.clock()
@@ -289,7 +295,7 @@ local function onUnequipped(tool: Tool)
 	applyScopeVisuals()
 
 	Hud.setAmmoVisible(false)
-	UserInputService.MouseIconEnabled = true
+	refreshMouseIcon()
 	updateWalkSpeed()
 end
 
@@ -326,7 +332,7 @@ local function onEquipped(tool: Tool)
 		Hud.setAmmoVisible(false)
 	end
 
-	UserInputService.MouseIconEnabled = false -- our crosshair replaces the cursor
+	refreshMouseIcon() -- our crosshair replaces the cursor
 	applyScopeVisuals()
 	updateWalkSpeed()
 end
@@ -372,6 +378,14 @@ local function onCharacterAdded(newCharacter: Model)
 		end
 	end)
 end
+
+MenuState.onChanged(function()
+	refreshMouseIcon()
+	if MenuState.anyOpen() then
+		scopeHeld = false
+		setScoped(false)
+	end
+end)
 
 player.CharacterAdded:Connect(onCharacterAdded)
 if player.Character then

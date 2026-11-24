@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local Ui = require(script.Parent:WaitForChild("Ui"))
+local MenuState = require(script.Parent:WaitForChild("MenuState"))
 
 local player = Players.LocalPlayer
 local MatchState = ReplicatedStorage:WaitForChild("MatchState")
@@ -116,6 +117,11 @@ local mouseUnlock = Ui.make("TextButton", {
 local myVote: string? = nil
 local voteButtons: { TextButton } = {}
 
+local function setMouseFree(free: boolean)
+	mouseUnlock.Visible = free
+	MenuState.set("MapVote", free)
+end
+
 local function renderVote(options: { { id: string, name: string } }, counts: { [string]: number })
 	for _, button in voteButtons do
 		button:Destroy()
@@ -124,7 +130,7 @@ local function renderVote(options: { { id: string, name: string } }, counts: { [
 
 	if #options == 0 then
 		votePanel.Visible = false
-		mouseUnlock.Visible = false
+		setMouseFree(false)
 		myVote = nil
 		return
 	end
@@ -139,7 +145,7 @@ local function renderVote(options: { { id: string, name: string } }, counts: { [
 		}, function()
 			myVote = option.id
 			MapVote:FireServer(option.id)
-			mouseUnlock.Visible = false -- give the mouse back to the camera
+			setMouseFree(false) -- give the mouse back to the camera
 		end, votePanel)
 		table.insert(voteButtons, button)
 	end
@@ -153,7 +159,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
 		return
 	end
 	if votePanel.Visible then
-		mouseUnlock.Visible = not mouseUnlock.Visible
+		setMouseFree(not mouseUnlock.Visible)
 	end
 end)
 
