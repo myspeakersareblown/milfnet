@@ -109,7 +109,7 @@ This is "favor the shooter": if it looked like a hit on your screen, it counts, 
 
 Rough pacing: an average player gets about 125 Taps per FFA match, so a Standard Crate (750) every ~6 matches (about 35 min). That's enough to feel rewarding without killing Gem sales.
 
-**Taps can never be bought with Robux, directly or through boosts.** That keeps the Taps crate clearly "earned". The VIP boost below applies to XP only for that reason.
+**Taps can never be bought with Robux, directly or through boosts.** That keeps the Taps crate clearly "earned". It's also why VIP gives **no** XP or Taps boost: levels pay out Taps and crates, so a paid XP boost would quietly turn into paid crates.
 
 ### Levels and challenges
 
@@ -161,7 +161,7 @@ Prices are starting points. Tune them once real data comes in.
 
 | Pass | Price | What you get |
 |---|---|---|
-| **VIP** | 399 R$ | +25% XP (not Taps, see §5), VIP chat tag and name color, an exclusive VIP sniper skin |
+| **VIP** | 399 R$ | VIP Royale sniper skin, VIP Gold tracer, VIP Crown kill effect, a [VIP] chat tag and a gold name in the kill feed. No stat or XP boosts (see §5) |
 | Finisher Pack | 199 R$ | Knife inspect animation + 3 knife finishers |
 | Extra Loadouts | 99 R$ | Save 3 cosmetic loadouts and swap between them |
 
@@ -239,6 +239,9 @@ end
 | Scope | Hold right click | **Scope** button (toggle) | Hold L2 |
 | Reload | R | **Reload** button (it also reloads on empty) | X |
 | Swap weapon | 1 / 2 | Hotbar | Hotbar |
+| Shop / Locker / Daily | B / L / J | Buttons on the left | none yet |
+| Settings | K | Button under your profile | none yet |
+| Map vote | V frees the mouse, then click | Tap a map | none yet |
 
 More than half of Roblox players are on phones, so mobile can't be an afterthought. Next mobile steps:
 - A dedicated fire button
@@ -255,21 +258,41 @@ More than half of Roblox players are on phones, so mobile can't be an afterthoug
 
 ```
 one-tap/
-├── default.project.json        Rojo: maps folders into the game
-├── src/shared/                 ReplicatedStorage.Shared (server + client)
-│   ├── Config/Weapons.luau     sniper & knife stats
-│   ├── Config/Combat.luau      health, regen, respawn, anti-cheat tolerances
-│   ├── Config/Cosmetics.luau   rarities, skins, crates, odds
-│   ├── DamageRules.luau        head = 100, body = 70, knife slash/backstab
-│   └── CrateRoller.luau        weighted rolls + pity + odds display (server rolls only)
-├── src/server/                 ServerScriptService.Server
-│   ├── CombatServer.server.luau   validates every shot/swing, applies damage, kills
-│   └── PlayerSetup.server.luau    leaderstats, health, spawn protection, hat hitboxes
-├── src/client/                 StarterPlayerScripts.Client
-│   ├── WeaponClient.client.luau   input, scope, spread, raycast, reload
-│   ├── FeedbackClient.client.luau hitmarkers, kill feed, banners, other players' tracers
-│   ├── Hud.luau                   scope overlay, crosshair, ammo, kill feed UI
-│   └── Effects.luau               tracers, recoil
+├── default.project.json              Rojo: maps folders into the game + all Remotes
+├── src/shared/                       ReplicatedStorage.Shared (server + client)
+│   ├── Config/
+│   │   ├── Weapons.luau              sniper & knife stats
+│   │   ├── Combat.luau               health, regen, respawn, anti-cheat tolerances
+│   │   ├── Match.luau                round length, kill target, min players, map vote
+│   │   ├── Economy.luau              Taps/XP rewards, level curve, level rewards
+│   │   ├── Cosmetics.luau            rarities, skins, crates + odds, scrap, featured prices
+│   │   ├── Products.luau             Robux game pass / product IDs (fill in)
+│   │   ├── Daily.luau                login streak rewards, challenge pool
+│   │   ├── Settings.luau             player settings + validation
+│   │   └── Sounds.luau               sound asset IDs (fill in)
+│   ├── DamageRules.luau              head = 100, body = 70, knife slash/backstab
+│   ├── CrateRoller.luau              weighted rolls + pity + odds (server rolls only)
+│   └── Featured.luau                 daily featured shop rotation
+├── src/server/                       ServerScriptService.Server
+│   ├── CombatServer                  validates every shot/swing, applies damage
+│   ├── MatchServer                   round loop, map vote, scoring, spawn picking
+│   ├── DataServer                    load / autosave / release profiles
+│   ├── ProgressionServer             Taps + XP for kills and rounds, lifetime stats
+│   ├── CosmeticsServer               equip, skins on weapons, cosmetic attributes
+│   ├── ShopServer                    crates, crafting, featured, Robux receipts, VIP, region policy
+│   ├── DailyServer                   login streak + challenges
+│   ├── SettingsServer                saves settings
+│   ├── PlayerSetup                   leaderstats, health, spawn protection, hat hitboxes
+│   └── Modules/                      PlayerData (session-locked saves), Progression, ActionRouter,
+│                                     Ownership, Signals, MapBuilder (greybox maps)
+├── src/client/                       StarterPlayerScripts.Client
+│   ├── WeaponClient                  input, scope, spread, raycast, reload
+│   ├── FeedbackClient                hitmarkers, banners, kill feed, others' tracers + sounds
+│   ├── MatchClient                   round status bar, map vote, results screen
+│   ├── ProfileHud                    level / XP / currency card, notifications
+│   ├── ShopClient                    shop, locker and daily window
+│   ├── SettingsClient                settings panel
+│   └── modules: Hud, Ui, Toasts, Effects, Sounds, Settings, PlayerState, MenuState
 └── src/character/Health.server.luau  replaces Roblox's default regen
 ```
 
@@ -279,6 +302,17 @@ one-tap/
 
 | # | Milestone | What's in it | Status |
 |---|---|---|---|
+| M0 | Core combat | Sniper + knife, 100/70 damage, server validation, scope/spread, reload, hitmarkers, kill feed | ✅ written |
+| M1 | Playable prototype | FFA round loop, map vote, results, 3 generated greybox maps, spawns away from enemies | ✅ written |
+| M2 | Feel | ✅ sound hooks (fill in IDs), settings panel. **To do:** real weapon models, viewmodel arms + animations, scope reticle art, kill cam, mobile fire button, scoped touch sensitivity | partly done |
+| M3 | Data | Session-locked saves, Taps, XP + levels, inventory, locker, skins applied to weapons | ✅ written |
+| M4 | Shop | Crates (server roll, odds, pity, Scrap), crafting, featured shop, Gem products + receipts, VIP, Starter Pack, region policy | ✅ written (fill in product IDs) |
+| M5 | Launch | **To do:** Duels mode, real maps, anti-cheat hardening (speed checks, stat flags), analytics funnels, icon/thumbnails/trailer, playtests, publish | |
+| M6 | Live ops | ✅ daily login streak + challenges. **To do:** Season Pass, seasonal crates, weekend events (Headshots Only, Knife Party), ranked Duels | partly done |
+
+Nothing has been run in Studio yet. The first job on PC is a playtest that works through the errors in the Output window.
+
+---|---|---|---|
 | M0 | **Core combat** | Sniper + knife, 100/70 damage, server validation, scope/spread, reload, hitmarkers, kill feed, leaderstats | ✅ starter code in this repo |
 | M1 | Playable prototype | Greybox map, FFA round loop (timer, kill target, end screen, map vote), spawn picking away from enemies | |
 | M2 | Feel | Real sniper and knife models, viewmodel arms + animations, sounds, scope reticle art, kill cam, mobile fire button and sensitivity | |

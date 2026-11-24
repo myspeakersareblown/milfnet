@@ -25,6 +25,8 @@ local DamageRules = require(Shared:WaitForChild("DamageRules"))
 local Hud = require(script.Parent:WaitForChild("Hud"))
 local Effects = require(script.Parent:WaitForChild("Effects"))
 local MenuState = require(script.Parent:WaitForChild("MenuState"))
+local Settings = require(script.Parent:WaitForChild("Settings"))
+local Sounds = require(script.Parent:WaitForChild("Sounds"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local FireShot = Remotes:WaitForChild("FireShot") :: RemoteEvent
@@ -37,7 +39,6 @@ local ACTION_SCOPE = "OneTapScope"
 local ACTION_RELOAD = "OneTapReload"
 local SCOPE_OVERLAY_AT = 0.85 -- scope progress at which the lens overlay appears
 
-local defaultFOV = workspace.CurrentCamera.FieldOfView
 local rng = Random.new()
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -89,8 +90,9 @@ end
 
 local function applyScopeVisuals()
 	local alpha = 1 - (1 - scopeProgress) ^ 2 -- ease out
-	workspace.CurrentCamera.FieldOfView = defaultFOV + (SNIPER.scopedFOV - defaultFOV) * alpha
-	UserInputService.MouseDeltaSensitivity = 1 + (SNIPER.scopedSensitivity - 1) * alpha
+	local baseFOV = Settings.get("FieldOfView")
+	workspace.CurrentCamera.FieldOfView = baseFOV + (SNIPER.scopedFOV - baseFOV) * alpha
+	UserInputService.MouseDeltaSensitivity = 1 + (Settings.get("ScopedSensitivity") - 1) * alpha
 
 	local inScope = scopeProgress >= SCOPE_OVERLAY_AT
 	Hud.setScopeOverlay(inScope)
@@ -108,6 +110,9 @@ local function setScoped(on: boolean)
 		return
 	end
 	scoped = on
+	if on then
+		Sounds.play("ScopeIn")
+	end
 	if not on then
 		-- Dropping the scope is instant; scoping in ramps up in RenderStepped.
 		scopeProgress = 0
@@ -160,6 +165,7 @@ local function reload()
 	local token = reloadToken
 	setScoped(false)
 	Reload:FireServer()
+	Sounds.play("Reload")
 	Hud.setAmmo(ammo, SNIPER.magSize, true)
 
 	task.delay(SNIPER.reloadTime, function()
@@ -197,6 +203,8 @@ local function fireSniper()
 	local hitPos = if result then result.Position else origin + direction * SNIPER.range
 
 	FireShot:FireServer(origin, direction, hitPart, hitPos)
+	Sounds.play("SniperShot")
+	task.delay(0.45, Sounds.play, "SniperBolt")
 
 	-- Tracer starts a little below/right of the eye so it reads like it left the barrel.
 	Effects.tracer((aim * CFrame.new(0.35, -0.45, -1.5)).Position, hitPos, Effects.tracerColorFor(player))
@@ -243,6 +251,7 @@ local function swingKnife()
 	end
 	-- Server decides slash vs backstab and whether it was in reach at all.
 	KnifeSwing:FireServer(target)
+	Sounds.play("KnifeSwing", 0.9 + math.random() * 0.2)
 end
 
 --------------------------------------------------------------------------------
@@ -378,6 +387,12 @@ local function onCharacterAdded(newCharacter: Model)
 		end
 	end)
 end
+
+Settings.onChanged(function(key)
+	if key == "FieldOfView" or key == "ScopedSensitivity" then
+		applyScopeVisuals()
+	end
+end)
 
 MenuState.onChanged(function()
 	refreshMouseIcon()

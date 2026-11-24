@@ -8,6 +8,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Hud = require(script.Parent:WaitForChild("Hud"))
 local Effects = require(script.Parent:WaitForChild("Effects"))
+local Settings = require(script.Parent:WaitForChild("Settings"))
+local Sounds = require(script.Parent:WaitForChild("Sounds"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local HitConfirm = Remotes:WaitForChild("HitConfirm") :: RemoteEvent
@@ -23,7 +25,10 @@ end)
 
 HitConfirm.OnClientEvent:Connect(function(weaponName: string, special: boolean, killed: boolean)
 	Hud.hitmarker(special, killed)
-	-- TODO(M2): headshot "ding" + kill sound here.
+	Sounds.play(if special and weaponName == "Sniper" then "HeadshotDing" else "Hitmarker")
+	if killed then
+		task.delay(0.08, Sounds.play, "Kill")
+	end
 	if not killed then
 		return
 	end
@@ -42,7 +47,7 @@ KillFeed.OnClientEvent:Connect(
 	function(killerName: string, victimName: string, weaponName: string, special: boolean, killer: Player?, position: Vector3?)
 		local killerColor = if killer and killer:GetAttribute("VIP") then VIP_COLOR else nil
 		Hud.killFeed(killerName, victimName, weaponName, special, killerColor)
-		if typeof(position) == "Vector3" then
+		if typeof(position) == "Vector3" and Settings.get("KillEffects") then
 			Effects.killEffectFor(killer, position)
 		end
 	end
@@ -52,7 +57,11 @@ ShotFired.OnClientEvent:Connect(function(shooter: Player, origin: Vector3, finis
 	if shooter == player then
 		return -- we already drew our own tracer instantly
 	end
-	if typeof(origin) == "Vector3" and typeof(finish) == "Vector3" then
+	if typeof(origin) ~= "Vector3" or typeof(finish) ~= "Vector3" then
+		return
+	end
+	Sounds.playAt("SniperShot", origin, 800)
+	if Settings.get("OtherTracers") then
 		Effects.tracer(origin, finish, Effects.tracerColorFor(shooter))
 	end
 end)

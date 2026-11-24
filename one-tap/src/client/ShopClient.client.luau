@@ -14,6 +14,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextChatService = game:GetService("TextChatService")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -21,6 +22,7 @@ local Ui = require(script.Parent:WaitForChild("Ui"))
 local PlayerState = require(script.Parent:WaitForChild("PlayerState"))
 local MenuState = require(script.Parent:WaitForChild("MenuState"))
 local Toasts = require(script.Parent:WaitForChild("Toasts"))
+local Sounds = require(script.Parent:WaitForChild("Sounds"))
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
@@ -609,13 +611,25 @@ local function playReel(crateId: string, reply: any)
 		{ Position = UDim2.fromOffset(finalX, 0) }
 	)
 
+	-- Tick sound each time a tile passes the marker.
+	local lastTile = -1
+	local ticker = RunService.RenderStepped:Connect(function()
+		local passed = math.floor((REEL_W / 2 - strip.Position.X.Offset) / TILE_W)
+		if passed ~= lastTile then
+			lastTile = passed
+			Sounds.play("CrateTick", 1 + rng:NextNumber() * 0.1)
+		end
+	end)
+
 	local finished = false
 	local function finish()
 		if finished then
 			return
 		end
 		finished = true
+		ticker:Disconnect()
 		tween:Cancel()
+		Sounds.play("CrateReveal")
 		showResult(crateId, reply)
 	end
 	Ui.button({

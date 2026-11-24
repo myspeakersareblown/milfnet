@@ -9,6 +9,7 @@ local TweenService = game:GetService("TweenService")
 local Ui = require(script.Parent:WaitForChild("Ui"))
 local PlayerState = require(script.Parent:WaitForChild("PlayerState"))
 local Toasts = require(script.Parent:WaitForChild("Toasts"))
+local Sounds = require(script.Parent:WaitForChild("Sounds"))
 local Config = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")
 local Economy = require(Config:WaitForChild("Economy"))
 
@@ -104,6 +105,7 @@ Notify.OnClientEvent:Connect(function(kind: string, data: any)
 	end
 	if kind == "LevelUp" then
 		Toasts.show(`LEVEL {data.level}!`, Economy.describeReward(data.reward or {}), C.Good)
+		Sounds.play("LevelUp")
 	elseif kind == "Toast" then
 		Toasts.show(data.title or "", data.text or "", data.color)
 	end
