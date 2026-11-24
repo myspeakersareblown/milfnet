@@ -36,15 +36,23 @@ HitConfirm.OnClientEvent:Connect(function(weaponName: string, special: boolean, 
 	end
 end)
 
-KillFeed.OnClientEvent:Connect(function(killerName: string, victimName: string, weaponName: string, special: boolean)
-	Hud.killFeed(killerName, victimName, weaponName, special)
-end)
+local VIP_COLOR = Color3.fromRGB(255, 200, 60)
+
+KillFeed.OnClientEvent:Connect(
+	function(killerName: string, victimName: string, weaponName: string, special: boolean, killer: Player?, position: Vector3?)
+		local killerColor = if killer and killer:GetAttribute("VIP") then VIP_COLOR else nil
+		Hud.killFeed(killerName, victimName, weaponName, special, killerColor)
+		if typeof(position) == "Vector3" then
+			Effects.killEffectFor(killer, position)
+		end
+	end
+)
 
 ShotFired.OnClientEvent:Connect(function(shooter: Player, origin: Vector3, finish: Vector3)
 	if shooter == player then
 		return -- we already drew our own tracer instantly
 	end
 	if typeof(origin) == "Vector3" and typeof(finish) == "Vector3" then
-		Effects.tracer(origin, finish)
+		Effects.tracer(origin, finish, Effects.tracerColorFor(shooter))
 	end
 end)

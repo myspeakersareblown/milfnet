@@ -212,7 +212,7 @@ function Hud.hitmarker(special: boolean, killed: boolean)
 	end)
 end
 
-function Hud.killFeed(killerName: string, victimName: string, weaponName: string, special: boolean)
+function Hud.killFeed(killerName: string, victimName: string, weaponName: string, special: boolean, killerColor: Color3?)
 	local tag = ""
 	if special then
 		tag = if weaponName == "Sniper" then "  HEADSHOT" else "  BACKSTAB"
@@ -225,7 +225,7 @@ function Hud.killFeed(killerName: string, victimName: string, weaponName: string
 		BackgroundTransparency = 0.45,
 		Font = Enum.Font.GothamBold,
 		TextSize = 16,
-		TextColor3 = if killerName == player.DisplayName then Color3.fromRGB(255, 220, 90) else WHITE,
+		TextColor3 = killerColor or (if killerName == player.DisplayName then Color3.fromRGB(255, 220, 90) else WHITE),
 		TextXAlignment = Enum.TextXAlignment.Right,
 		Text = `{killerName}  [{weaponName}]  {victimName}{tag}`,
 		LayoutOrder = feedCount,

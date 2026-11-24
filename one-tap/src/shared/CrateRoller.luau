@@ -136,6 +136,8 @@ function CrateRoller.validate(): { string }
 		for _, itemId in crate.items do
 			if not Cosmetics.Items[itemId] then
 				table.insert(problems, `{crateId}: unknown item "{itemId}"`)
+			elseif not Cosmetics.isObtainable(itemId) then
+				table.insert(problems, `{crateId}: "{itemId}" is VIP-only/exclusive and can't be in a crate`)
 			end
 		end
 

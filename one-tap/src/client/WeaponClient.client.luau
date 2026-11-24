@@ -193,7 +193,7 @@ local function fireSniper()
 	FireShot:FireServer(origin, direction, hitPart, hitPos)
 
 	-- Tracer starts a little below/right of the eye so it reads like it left the barrel.
-	Effects.tracer((aim * CFrame.new(0.35, -0.45, -1.5)).Position, hitPos)
+	Effects.tracer((aim * CFrame.new(0.35, -0.45, -1.5)).Position, hitPos, Effects.tracerColorFor(player))
 	Effects.recoil(SNIPER.recoilKick)
 
 	if SNIPER.unscopeOnShot and scoped then
