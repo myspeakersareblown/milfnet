@@ -50,7 +50,8 @@ end
 local function onPlayerAdded(player: Player)
 	local leaderstats = Instance.new("Folder")
 	leaderstats.Name = "leaderstats"
-	for _, statName in { "Kills", "Deaths" } do
+	-- Kills/Deaths reset each round (MatchServer). Level comes from saved data (PlayerData).
+	for _, statName in { "Kills", "Deaths", "Level" } do
 		local value = Instance.new("IntValue")
 		value.Name = statName
 		value.Parent = leaderstats
