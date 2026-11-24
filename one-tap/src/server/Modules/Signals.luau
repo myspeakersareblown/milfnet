@@ -1,9 +1,9 @@
 --[[
 	Signals: server-only events that let systems talk without requiring each other.
 
-	  Kill          (attacker: Player, victim: Player?, weaponName: string, special: boolean)
+	  Kill          (attacker: Player, victim: Player?, weaponName: string, special: boolean, distance: number?)
 	                Fired by CombatServer. `special` = headshot (Sniper) / backstab (Knife).
-	                victim is nil for test dummies.
+	                victim is nil for test dummies. distance = shot length (Sniper only).
 	  RoundStarted  (mapName: string)
 	  RoundEnded    (standings: { Standing }, completed: boolean)
 	                completed = false when the round was cut short (players left).

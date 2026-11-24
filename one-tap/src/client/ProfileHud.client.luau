@@ -11,7 +11,6 @@ local PlayerState = require(script.Parent:WaitForChild("PlayerState"))
 local Toasts = require(script.Parent:WaitForChild("Toasts"))
 local Config = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")
 local Economy = require(Config:WaitForChild("Economy"))
-local Cosmetics = require(Config:WaitForChild("Cosmetics"))
 
 local Notify = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Notify") :: RemoteEvent
 
@@ -99,29 +98,12 @@ end)
 -- Server notifications
 --------------------------------------------------------------------------------
 
-local function describeReward(reward: any): string
-	local parts = {}
-	if reward.taps then
-		table.insert(parts, `+{reward.taps} Taps`)
-	end
-	if reward.gems then
-		table.insert(parts, `+{reward.gems} Gems`)
-	end
-	if reward.crates then
-		for crateId, count in reward.crates do
-			local crate = Cosmetics.Crates[crateId]
-			table.insert(parts, `+{count} {if crate then crate.name else crateId}`)
-		end
-	end
-	return table.concat(parts, "   ")
-end
-
 Notify.OnClientEvent:Connect(function(kind: string, data: any)
 	if typeof(data) ~= "table" then
 		data = {}
 	end
 	if kind == "LevelUp" then
-		Toasts.show(`LEVEL {data.level}!`, describeReward(data.reward or {}), C.Good)
+		Toasts.show(`LEVEL {data.level}!`, Economy.describeReward(data.reward or {}), C.Good)
 	elseif kind == "Toast" then
 		Toasts.show(data.title or "", data.text or "", data.color)
 	end

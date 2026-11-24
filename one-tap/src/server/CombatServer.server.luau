@@ -132,7 +132,15 @@ local function charactersForLineOfSight(extra: Model): { Instance }
 end
 
 -- `special` = headshot for the sniper, backstab for the knife.
-local function applyDamage(attacker: Player, targetHumanoid: Humanoid, damage: number, weaponName: string, special: boolean)
+-- `distance` (sniper only) feeds "long shot" challenges.
+local function applyDamage(
+	attacker: Player,
+	targetHumanoid: Humanoid,
+	damage: number,
+	weaponName: string,
+	special: boolean,
+	distance: number?
+)
 	if MatchState:GetAttribute("Phase") == "Results" then
 		return -- round is over, no damage on the results screen
 	end
@@ -161,7 +169,7 @@ local function applyDamage(attacker: Player, targetHumanoid: Humanoid, damage: n
 			targetCharacter:GetPivot().Position
 		)
 		-- Scoring (MatchServer), rewards (Progression), challenges all listen to this.
-		Signals.Kill:Fire(attacker, victim, weaponName, special)
+		Signals.Kill:Fire(attacker, victim, weaponName, special, distance)
 	end
 end
 
@@ -259,7 +267,7 @@ FireShot.OnServerEvent:Connect(function(player: Player, origin: any, direction: 
 
 	-- 7. Passed. The server decides the damage.
 	local damage, headshot = DamageRules.sniperDamage(hitPart)
-	applyDamage(player, targetHumanoid, damage, "Sniper", headshot)
+	applyDamage(player, targetHumanoid, damage, "Sniper", headshot, distance)
 end)
 
 Reload.OnServerEvent:Connect(function(player: Player)

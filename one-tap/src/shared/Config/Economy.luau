@@ -47,4 +47,23 @@ Economy.starting = {
 	crates = { StandardCrate = 1 },
 }
 
+-- "+50 Taps   +1 Standard Crate" for toasts and menus.
+function Economy.describeReward(reward: Reward): string
+	local Cosmetics = require(script.Parent:WaitForChild("Cosmetics"))
+	local parts = {}
+	if reward.taps then
+		table.insert(parts, `+{reward.taps} Taps`)
+	end
+	if reward.gems then
+		table.insert(parts, `+{reward.gems} Gems`)
+	end
+	if reward.crates then
+		for crateId, count in reward.crates do
+			local crate = Cosmetics.Crates[crateId]
+			table.insert(parts, `+{count} {if crate then crate.name else crateId}`)
+		end
+	end
+	return table.concat(parts, "   ")
+end
+
 return Economy

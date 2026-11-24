@@ -1,10 +1,11 @@
 --[[
 	ShopClient: the Shop + Locker window.
 
-	  B = Shop, L = Locker (or the buttons on the left of the screen)
+	  B = Shop, L = Locker, J = Daily (or the buttons on the left of the screen)
 
 	Tabs: Crates (open, odds, opening reel) · Featured (daily direct buy) ·
-	      Gems (Robux packs, Starter Pack, VIP) · Locker (equip + craft with Scrap)
+	      Gems (Robux packs, Starter Pack, VIP) · Locker (equip + craft with Scrap) ·
+	      Daily (login streak + challenges)
 
 	Everything here only REQUESTS actions; the server decides (ShopServer).
 ]]
@@ -25,7 +26,10 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local Cosmetics = require(Config:WaitForChild("Cosmetics"))
 local Products = require(Config:WaitForChild("Products"))
+local Daily = require(Config:WaitForChild("Daily"))
+local Economy = require(Config:WaitForChild("Economy"))
 local CrateRoller = require(Shared:WaitForChild("CrateRoller"))
+local Featured = require(Shared:WaitForChild("Featured"))
 
 local player = Players.LocalPlayer
 local C = Ui.Colors
@@ -84,7 +88,7 @@ end
 local side = Ui.make("Frame", {
 	AnchorPoint = Vector2.new(0, 0.5),
 	Position = UDim2.new(0, 12, 0.5, 0),
-	Size = UDim2.fromOffset(120, 100),
+	Size = UDim2.fromOffset(120, 150),
 	BackgroundTransparency = 1,
 }, gui)
 Ui.list(side, 8)
@@ -190,7 +194,7 @@ Ui.button({
 	close()
 end, window)
 
-local TABS = { "Crates", "Featured", "Gems", "Locker" }
+local TABS = { "Crates", "Featured", "Gems", "Locker", "Daily" }
 local tabButtons: { [string]: TextButton } = {}
 for i, tab in TABS do
 	tabButtons[tab] = Ui.button({
@@ -743,7 +747,10 @@ local function renderCrates()
 	end
 end
 
-local featuredCountdown: TextLabel? = nil
+-- One countdown label at a time (featured shop / daily challenges both reset at UTC midnight).
+local countdownLabel: TextLabel? = nil
+local countdownEndsAt = 0
+local countdownPrefix = ""
 
 local function renderFeatured()
 	local now = workspace:GetServerTimeNow()
@@ -763,13 +770,15 @@ local function renderFeatured()
 		return
 	end
 
-	featuredCountdown = Ui.label({
+	countdownLabel = Ui.label({
 		Size = UDim2.new(1, 0, 0, 22),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = C.Muted,
 		TextSize = 15,
 		Text = "",
 	}, content)
+	countdownEndsAt = featuredCache.resetsAt
+	countdownPrefix = "New items in"
 	local holder = Ui.make("Frame", {
 		Position = UDim2.fromOffset(0, 30),
 		Size = UDim2.new(1, 0, 1, -30),
@@ -1034,23 +1043,148 @@ local function renderLocker()
 	end
 end
 
+local function renderDaily()
+	local d = data()
+	local daily = d.Daily or {}
+	local list = scroller(content)
+
+	-- Login streak: a 7-day strip, days already collected this cycle in green.
+	local streak = daily.streak or 0
+	Ui.label({
+		Size = UDim2.new(1, -10, 0, 26),
+		Font = Ui.FontHeavy,
+		TextSize = 20,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Text = `LOGIN STREAK: {streak} DAY{if streak == 1 then "" else "S"}`,
+		LayoutOrder = 1,
+	}, list)
+	local strip = Ui.make("Frame", { Size = UDim2.new(1, -10, 0, 86), BackgroundTransparency = 1, LayoutOrder = 2 }, list)
+	Ui.list(strip, 8, true)
+	local cycleDay = if streak > 0 then ((streak - 1) % #Daily.loginRewards) + 1 else 0
+	for i, reward in Daily.loginRewards do
+		local collected = i <= cycleDay
+		local box = Ui.make("Frame", {
+			Size = UDim2.fromOffset(92, 86),
+			BackgroundColor3 = if collected then C.Good else C.PanelLight,
+			BackgroundTransparency = if collected then 0.4 else 0,
+			BorderSizePixel = 0,
+			LayoutOrder = i,
+		}, strip)
+		Ui.corner(box, 8)
+		if i == cycleDay then
+			Ui.stroke(box, C.Good, 2)
+		end
+		Ui.label({ Position = UDim2.fromOffset(0, 6), Size = UDim2.new(1, 0, 0, 18), TextSize = 14, Text = `DAY {i}` }, box)
+		Ui.label({
+			Position = UDim2.fromOffset(4, 26),
+			Size = UDim2.new(1, -8, 1, -30),
+			Font = Ui.FontBody,
+			TextSize = 12,
+			TextColor3 = C.Taps,
+			Text = Economy.describeReward(reward),
+		}, box)
+	end
+
+	Ui.label({
+		Size = UDim2.new(1, -10, 0, 30),
+		Font = Ui.FontHeavy,
+		TextSize = 20,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Bottom,
+		Text = "TODAY'S CHALLENGES",
+		LayoutOrder = 3,
+	}, list)
+
+	local progressById = daily.progress or {}
+	local doneById = daily.done or {}
+	for i, id in daily.challenges or {} do
+		local challenge = Daily.Challenges[id]
+		if challenge then
+			local progress = progressById[id] or 0
+			local done = doneById[id] == true
+			local row = Ui.make("Frame", {
+				Size = UDim2.new(1, -10, 0, 58),
+				BackgroundColor3 = C.PanelLight,
+				BorderSizePixel = 0,
+				LayoutOrder = 10 + i,
+			}, list)
+			Ui.corner(row, 8)
+			if done then
+				Ui.stroke(row, C.Good, 2)
+			end
+			Ui.label({
+				Position = UDim2.fromOffset(12, 6),
+				Size = UDim2.new(0.6, 0, 0, 22),
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextSize = 16,
+				Text = challenge.text,
+			}, row)
+			Ui.label({
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, -12, 0, 6),
+				Size = UDim2.new(0.4, -12, 0, 22),
+				TextXAlignment = Enum.TextXAlignment.Right,
+				TextSize = 14,
+				TextColor3 = C.Taps,
+				Text = Economy.describeReward(challenge.reward),
+			}, row)
+			local barBack = Ui.make("Frame", {
+				Position = UDim2.fromOffset(12, 36),
+				Size = UDim2.new(1, -110, 0, 10),
+				BackgroundColor3 = C.Panel,
+				BorderSizePixel = 0,
+			}, row)
+			Ui.corner(barBack, 5)
+			local fill = Ui.make("Frame", {
+				Size = UDim2.fromScale(math.clamp(progress / challenge.goal, 0, 1), 1),
+				BackgroundColor3 = C.Good,
+				BorderSizePixel = 0,
+			}, barBack)
+			Ui.corner(fill, 5)
+			Ui.label({
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, -12, 0, 30),
+				Size = UDim2.fromOffset(86, 22),
+				TextXAlignment = Enum.TextXAlignment.Right,
+				TextSize = 14,
+				TextColor3 = if done then C.Good else C.Muted,
+				Text = if done then "DONE" else `{progress} / {challenge.goal}`,
+			}, row)
+		end
+	end
+
+	countdownLabel = Ui.label({
+		Size = UDim2.new(1, -10, 0, 24),
+		Font = Ui.FontBody,
+		TextSize = 14,
+		TextColor3 = C.Muted,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Text = "",
+		LayoutOrder = 100,
+	}, list)
+	countdownEndsAt = Featured.resetsAt(Featured.dayNumber(workspace:GetServerTimeNow()))
+	countdownPrefix = "New challenges in"
+end
+
 local RENDERERS = {
 	Crates = renderCrates,
 	Featured = renderFeatured,
 	Gems = renderGems,
 	Locker = renderLocker,
+	Daily = renderDaily,
 }
+
 
 render = function()
 	if not isOpen or busy then
 		return
 	end
 	updateBalance()
-	titleLabel.Text = if currentTab == "Locker" then "LOCKER" else "SHOP"
+	titleLabel.Text = if currentTab == "Locker" then "LOCKER" elseif currentTab == "Daily" then "DAILY" else "SHOP"
 	for tab, button in tabButtons do
 		button.BackgroundColor3 = if tab == currentTab then C.Accent else C.PanelLight
 	end
-	featuredCountdown = nil
+	countdownLabel = nil
 	clear(content)
 	if not data() then
 		Ui.label({ Size = UDim2.new(1, 0, 0, 30), Text = "Loading your profile...", TextColor3 = C.Muted }, content)
@@ -1106,6 +1240,14 @@ Ui.button({
 }, function()
 	toggle("Locker")
 end, side)
+Ui.button({
+	Size = UDim2.new(1, 0, 0, 44),
+	Font = Ui.FontHeavy,
+	Text = if touchOnly then "DAILY" else "DAILY [J]",
+	LayoutOrder = 3,
+}, function()
+	toggle("Daily")
+end, side)
 
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then
@@ -1115,6 +1257,8 @@ UserInputService.InputBegan:Connect(function(input, processed)
 		toggle("Crates")
 	elseif input.KeyCode == Enum.KeyCode.L then
 		toggle("Locker")
+	elseif input.KeyCode == Enum.KeyCode.J then
+		toggle("Daily")
 	end
 end)
 
@@ -1127,15 +1271,17 @@ end)
 player:GetAttributeChangedSignal("VIP"):Connect(render)
 player:GetAttributeChangedSignal("PaidRandomItemsRestricted"):Connect(render)
 
--- Featured countdown
+-- Countdown (featured shop / daily challenges)
 task.spawn(function()
 	while true do
 		task.wait(1)
-		if featuredCountdown and featuredCountdown.Parent and featuredCache then
-			local left = featuredCache.resetsAt - workspace:GetServerTimeNow()
+		if countdownLabel and countdownLabel.Parent then
+			local left = math.max(0, countdownEndsAt - workspace:GetServerTimeNow())
 			local hours = math.floor(left / 3600)
-			featuredCountdown.Text = `New items in {hours}h {Ui.formatTime(left % 3600)}`
+			countdownLabel.Text = `{countdownPrefix} {hours}h {Ui.formatTime(left % 3600)}`
 			if left <= 0 then
+				featuredCache = nil
+				task.wait(2) -- let the server roll over first
 				render()
 			end
 		end
