@@ -1,0 +1,8 @@
+# Built / saved places (the code lives in src/, the place file is yours)
+*.rbxl
+*.rbxlx
+*.rbxl.lock
+*.rbxlx.lock
+
+# Rojo / editor tooling
+sourcemap.json

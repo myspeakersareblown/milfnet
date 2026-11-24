@@ -1,0 +1,86 @@
+{
+  "name": "one-tap",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "src/shared"
+      },
+      "Remotes": {
+        "$className": "Folder",
+        "FireShot": { "$className": "RemoteEvent" },
+        "Reload": { "$className": "RemoteEvent" },
+        "KnifeSwing": { "$className": "RemoteEvent" },
+        "HitConfirm": { "$className": "RemoteEvent" },
+        "KillFeed": { "$className": "RemoteEvent" },
+        "ShotFired": { "$className": "UnreliableRemoteEvent" }
+      }
+    },
+
+    "ServerScriptService": {
+      "Server": {
+        "$path": "src/server"
+      }
+    },
+
+    "StarterPlayer": {
+      "$properties": {
+        "CameraMode": "LockFirstPerson"
+      },
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "Client": {
+          "$path": "src/client"
+        }
+      },
+      "StarterCharacterScripts": {
+        "$className": "StarterCharacterScripts",
+        "Health": {
+          "$path": "src/character/Health.server.luau"
+        }
+      }
+    },
+
+    "StarterPack": {
+      "Sniper": {
+        "$className": "Tool",
+        "$properties": {
+          "CanBeDropped": false,
+          "ToolTip": "Sniper"
+        },
+        "Handle": {
+          "$className": "Part",
+          "$properties": {
+            "Size": [0.35, 0.5, 4.5],
+            "Color": [0.17, 0.18, 0.2],
+            "Material": "Metal",
+            "CanCollide": false,
+            "CanQuery": false,
+            "CanTouch": false,
+            "Massless": true
+          }
+        }
+      },
+      "Knife": {
+        "$className": "Tool",
+        "$properties": {
+          "CanBeDropped": false,
+          "ToolTip": "Knife"
+        },
+        "Handle": {
+          "$className": "Part",
+          "$properties": {
+            "Size": [0.15, 0.3, 1.6],
+            "Color": [0.75, 0.76, 0.8],
+            "Material": "Metal",
+            "CanCollide": false,
+            "CanQuery": false,
+            "CanTouch": false,
+            "Massless": true
+          }
+        }
+      }
+    }
+  }
+}
